@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--namespace是CourseDao的完整限定名 -->
+<mapper namespace="org.bluesky.mybatis.dao.CourseDao">
+	
+	<!-- ======================================================非级联相关操作Start===================================================== -->
+
+	<!--课程实体映射 -->
+	<resultMap id="courseResultMap" type="Course">
+		<id property="id" column="id" />
+		<result property="courseCode" column="course_code" />
+		<result property="courseName" column="course_name" />
+	</resultMap>
+	
+	<!--根据id查询课程 -->
+	<select id="getById" parameterType="int" resultMap="courseResultMap">
+		select id, course_code, course_name
+		from course where id=#{id}
+	</select>
+	
+	<!--课程实体映射，映射简单属性。resultMap继承 -->
+	<!--
+	<resultMap id="simpleCourse" type="Course">
+		<id property="id" column="course_id" />
+		<result property="courseCode" column="course_code" />
+		<result property="courseName" column="course_name" />
+	</resultMap>
+	-->
+	<!--课程实体映射，除映射简单属性，还包含students复杂属性映射 -->
+	<!--
+	<resultMap id="courseResutMap" type="Course" extends="simpleCourse">
+		<collection property="students" resultMap="org.bluesky.mybatis.dao.TeacherDao.simpleStudent" />
+	</resultMap>
+	-->
+	
+	<!-- ======================================================非级联相关操作end======================================================= -->
+	
+</mapper>

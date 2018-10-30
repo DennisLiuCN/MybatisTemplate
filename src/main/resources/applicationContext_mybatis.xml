@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:jee="http://www.springframework.org/schema/jee"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.1.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.1.xsd
+		http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee-4.1.xsd"
+	default-autowire="byName" default-lazy-init="false">
+	
+	<context:property-placeholder location="classpath:jdbc.properties" />
+	
+	<!--JNDI数据源配置方式 -->
+	<!--
+	<jee:jndi-lookup id="dataSource" jndi-name="ds_mybatis"/>
+	-->
+	
+	<!--本示例采用DBCP连接池，应预先把DBCP和POOL的jar包复制到工程的lib目录下。 连接池配置如下 -->
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName" value="${jdbc.driver}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+
+		<!--初始化连接：默认值0；连接池启动时创建的初始化连接数量 -->
+		<property name="initialSize" value="0" />
+		<!--最大活动连接：默认值8；连接池在同一时间能够分配的最大活动连接的数量，如果设置为非正数则表示不限制 -->
+		<property name="maxActive" value="20" />
+		<!--最小空闲连接：默认值0；连接池中允许保持空闲状态的最小连接数量,低于这个数量将创建新的连接，如果设置为0则不创建 -->
+		<property name="minIdle" value="5" />
+		<!--最大空闲连接：默认值8；连接池中容许保持空闲状态的最大连接数量,超过的空闲连接将被释放，如果设置为负数表示不限制 -->
+		<property name="maxIdle" value="20" />
+		<!--最大等待时间：默认值无限；当没有可用连接时，连接池等待连接被归还的最大时间(以毫秒计数)，超过时间则抛出异常，如果设置为-1表示无限等待 -->
+		<property name="maxWait" value="1000" />
+		<!--连通性验证：用来验证从连接池取出的连接，在将连接返回给调用者之前。如果指定，则查询必须是一个SQL SELECT并且必须返回至少一行记录 -->
+		<property name="validationQuery" value="SELECT NOW() FROM DUAL" />
+		
+		<!--连接被泄露时是否打印：标记当Statement或连接被泄露时是否打印程序的stack traces日志 -->
+		<property name="logAbandoned" value="true" />
+		<!--是否自动回收超时连接 -->
+		<property name="removeAbandoned" value="true" />
+		<!--超时时间(以秒数为单位) -->
+		<property name="removeAbandonedTimeout" value="10" />
+		<!--在空闲连接回收器线程运行期间休眠的时间值，以毫秒为单位-->
+		<property name="timeBetweenEvictionRunsMillis" value="10000" />
+		<!--在每次空闲连接回收器线程(如果有)运行时检查的连接数量 -->
+		<property name="numTestsPerEvictionRun" value="10" />
+		<!--连接在池中保持空闲而不被空闲连接回收时间 -->
+		<property name="minEvictableIdleTimeMillis" value="10000" />
+	</bean>
+	
+	<!--Spring对事务管理做了抽象，提供了统一的编程接口。
+		例如DataSourceTransactionManager事务管理器，实际上是实现了接口org.springframework.transaction.PlatformTransactionManager。
+		针对不同的环境，Spring提供了不同的实现。例如，对于Hibernate，可使用事务管理器org.springframework.orm.hibernate3.HibernateTransactionManager。
+		与此相关的接口还有org.springframework.transaction.TransactionDefinition和org.springframework.transaction.TransactionStatus，分别代表事务的定义和事务的状态。
+		提供统一接口的好处是我们只需要针对这个接口编程，而无需考虑不同环境下事务处理的不同细节。 -->
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	
+	
+	<!-- ============================================================针对myBatis的配置项============================================================ -->
+	
+	<!--mybatis接口bean第一、二种定义方式使用，第三种不使用 -->
+	<!--sqlSessionFactory的class是org.mybatis.spring.SqlSessionFactoryBean，
+		此类实现了Srping中的一个接口org.springframework.beans.factory.FactoryBean，这个接口声明了一个方法getObject()。
+		当要引用sqlSessionFactory这个bean的时候，返回的不是类SqlSessionFactoryBean的实例，而是此实例的getObject()方法的返回值。
+		而SqlSessionFactoryBean对此方法的实现，是返回了一个SqlSessionFactory对象。即SqlSessionFactoryBean的实例是用来生成SqlSessionFactory对象的工厂 -->
+	<!--
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<!-dataSource属性指定要用到的连接池 ->
+		<property name="dataSource" ref="dataSource" />
+		<!-configLocation属性指定mybatis的核心配置文件 ->
+		<property name="configLocation" value="mybatis-configuration_spring.xml" />
+	</bean>
+	-->
+	
+	<!--mybatis接口bean第一种定义方式 -->
+	<!--MapperFactoryBean：根据mapper接口生成代理对象。缺点：需要针对每个mapper进行配置，麻烦 -->
+	<!--
+	<bean id="studentDao" class="org.mybatis.spring.mapper.MapperFactoryBean">
+		<!-sqlSessionFactory属性指定要用到的SqlSessionFactory实例 ->
+		<property name="sqlSessionFactory" ref="sqlSessionFactory" />
+		<!-mapperInterface属性指定映射器接口，用于实现此接口并生成映射器对象 ->
+		<property name="mapperInterface" value="org.bluesky.mybatis.dao.StudentDao" />
+	</bean>
+	-->
+	
+	
+	<!--mybatis接口bean第二种定义方式 -->
+	
+	<!--MapperFactoryBean：根据mapper接口生成代理对象。缺点：需要针对每个mapper进行配置，麻烦 -->
+	<!--当需要在applicationContext.xml中配置多个映射器时，它们的class和sqlSessionFactory属性都是一样的（也许还有其它一样的属性）。借助于bean继承机制可以消除这种冗余信息 -->
+	<!--把父bean parentMapper的abstract属性指定为true。
+		这样Spring就不会创建这个bean实例。它存在的意义是配置好class和sqlSessionFactory这两个属性供其他子bean继承。而子bean通过把parent属性设置为parentMapper，即可继承这两个属性 -->
+	<!--
+	<bean id="parentMapper" class="org.mybatis.spring.mapper.MapperFactoryBean" abstract="true">
+		<!-sqlSessionFactory属性指定要用到的SqlSessionFactory实例 ->
+		<property name="sqlSessionFactory" ref="sqlSessionFactory" />
+	</bean>
+	
+	<bean id="studentDao" parent="parentMapper">
+		<!-mapperInterface属性指定映射器接口，用于实现此接口并生成映射器对象 ->
+		<property name="mapperInterface" value="org.bluesky.mybatis.dao.StudentDao" />
+	</bean>
+	
+	<bean id="teacherDao" parent="parentMapper">
+		<!-mapperInterface属性指定映射器接口，用于实现此接口并生成映射器对象 ->
+		<property name="mapperInterface" value="org.bluesky.mybatis.dao.TeacherDao" />
+	</bean>
+	-->
+	
+	
+	<!--mybatis接口bean第三种定义方式 -->
+	
+	<!-- 配置SqlSessionFactory，此处id不能使用sqlSessionFactory，否则出现配置文件jdbc.properties无法加载问题（SSMTemplate项目中可以，原因未知） -->
+	<bean id="mySqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<!-- dataSource属性指定要用到的连接池 -->
+		<property name="dataSource" ref="dataSource" />
+		<!-- configLocation属性指定mybatis的核心配置文件 -->
+		<property name="configLocation" value="classpath:mybatis-configuration_spring.xml" />
+		<!-- 自动批量扫描所有JavaBean别名，省掉sqlMapConfig.xml里手工配置typeAliases信息 -->
+		<property name="typeAliasesPackage" value="org.bluesky.mybatis.entity"></property>
+		<!-- 插件配置，省掉sqlMapConfig.xml里手工配置plugins信息 -->
+		<property name="plugins">
+			<array>
+				<bean class="com.github.pagehelper.PageHelper">
+					<property name="properties">
+						<value>dialect=hsqldb</value>
+					</property>
+				</bean>
+			</array>
+		</property>
+		<!-- 自动扫描所有SQL映射的xml文件，省掉sqlMapConfig.xml里手工配置mapper信息 -->
+		<!-- 第一种配置多个Mapper映射文件夹方式 -->
+		<property name="mapperLocations" value="classpath:org/bluesky/mybatis/mapper/*.xml" />
+		<!--
+		<property name="mapperLocations" value="classpath:org/bluesky/ssm/mapper/**/*Mapper.xml" />
+        -->
+		<!-- 第二种配置多个Mapper映射文件夹方式 -->
+		<!--
+		<property name="mapperLocations">
+			<list>
+                <value>classpath:org/bluesky/ssm/mapper/*Mapper.xml</value>
+                <value>classpath:org/bluesky/ssm/mapper/auto/*Mapper.xml</value>
+            </list>
+        </property>
+        -->
+	</bean>
+
+	<!--mapper批量扫描，从mapper包中扫描出mapper接口，自动创建代理对象并且在spring容器中注册
+		自动扫描出来的mapper接口实现类的bean的id为mapper接口类名（首字母小写）
+	       注意：有些资料中说“将mapper.java接口和mapper.xml映射文件名称保持一致，且在一个目录中”，
+			  但经本人实际测试，mybatis配置文件中不使用mappers元素，如果上面配置了mapperLocations属性，则不必使mapper.java接口和mapper.xml映射文件名称保持一致，且不必在一个目录中；
+			  如果上面没有配置mapperLocations属性，则需要按照该规则 -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<!-- basePackage指定要扫描的包（存放接口），在此包及子包之下的映射器都会被搜索到。可指定多个包，包与包之间用逗号或分号分隔 -->
+		<property name="basePackage" value="org.bluesky.mybatis.dao"/>
+		<property name="sqlSessionFactoryBeanName" value="mySqlSessionFactory"/>
+	</bean>
+	<!-- ============================================================针对myBatis的配置项============================================================ -->
+	
+</beans>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--namespace是TeacherAnnoDao的完整限定名 -->
+<mapper namespace="org.bluesky.mybatis.dao.params.TeacherAnnoDao">
+
+	<!-- ========================================================注解相关操作start======================================================= -->
+
+	<resultMap id="teacherResultMap" type="Teacher">
+		<id property="id" column="id" />
+		<result property="name" column="name" />
+		<result property="gender" column="gender" />
+		<result property="researchArea" column="research_area" />
+		<result property="title" column="title" />
+		
+		<collection property="supervisees" column="id" select="org.bluesky.mybatis.dao.params.StudentAnnoDao.getStudents" />
+	</resultMap>
+
+	<select id="getById" parameterType="int" resultMap="teacherResultMap">
+		select * from teacher where id=#{id}
+	</select>
+
+	<!-- 1.使用注解方式传递参数 -->
+	<!-- #{…}是一个参数标记，而${…}只是简单的字符串替换。 一般而言，为避免SQL注入攻击，传递参数应使用#{…}方式，因为这样MyBatis会处理好特殊字符转义的问题；
+		  但在SQL语句的某些地方，又不能使用#{…}方式，例如：在order by子句中使用#{参数名}的方式无效，需要使用${参数名}的方式。 -->
+	<!--
+	<select id="findTeacherByPage" resultMap="teacherResultMap">
+		select * from teacher
+		order by ${sort} ${dir} limit #{start},#{limit}
+	</select>
+	-->
+	
+	<!-- 2.使用Map方式传递参数 -->
+	<!-- parameterType="java.util.Map"可以省略 -->
+	<!--
+	<select id="findTeacherByPage" parameterType="java.util.Map" resultMap="teacherResultMap">
+		select * from teacher where title like #{title}
+		order by ${sort} ${dir} limit #{start},#{limit}
+	</select>
+	-->
+
+	<!-- 3.使用混合方式传递参数 -->
+	<select id="findTeacherByPage" resultMap="teacherResultMap">
+		select * from teacher
+		where title like #{param1.title}
+		order by ${param1.sort} ${param1.dir} limit #{param2}, #{param3}
+	</select>
+
+	<!-- =========================================================注解相关操作end======================================================== -->
+
+</mapper>

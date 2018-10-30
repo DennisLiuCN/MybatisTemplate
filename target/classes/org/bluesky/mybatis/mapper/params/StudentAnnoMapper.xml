@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--namespace是StudentAnnoDao的完整限定名 -->
+<mapper namespace="org.bluesky.mybatis.dao.params.StudentAnnoDao">
+	
+	<!-- ========================================================注解相关操作start======================================================= -->
+	
+	<resultMap id="studentResultMap" type="Student">
+		<id property="id" column="id" />
+		<result property="name" column="name" />
+		<result property="gender" column="gender" />
+		<result property="major" column="major" />
+		<result property="grade" column="grade" />
+
+		<association property="supervisor" column="supervisor_id" select="org.bluesky.mybatis.dao.params.TeacherAnnoDao.getById" />
+	</resultMap>
+	
+	<select id="getStudents" parameterType="int" resultMap="studentResultMap">
+		select * from student where supervisor_id=#{id}
+	</select>
+	
+	<!-- =========================================================注解相关操作end======================================================== -->
+	
+</mapper>

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:jee="http://www.springframework.org/schema/jee"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.1.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.1.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.1.xsd
+		http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee-4.1.xsd"
+	default-autowire="byName" default-lazy-init="false">
+	
+	<!-- ================================================================配置数据源================================================================= -->
+	
+	<!-- 引入数据源资源文件 -->
+	<context:property-placeholder location="classpath:jdbc.properties" />
+	
+	<!-- JNDI数据源配置方式 -->
+	<!--
+	<jee:jndi-lookup id="dataSource" jndi-name="ds_mybatis"/>
+	-->
+	
+	<!-- 本示例采用DBCP连接池，应预先把DBCP和POOL的jar包复制到工程的lib目录下。 
+		  连接池配置如下（如果使用dbcp2则需要注释掉maxActive、maxWait、removeAbandoned）： -->
+	<bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource" destroy-method="close">
+		<property name="driverClassName" value="${jdbc.driver}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+		
+		<!-- 初始化连接：默认值0；连接池启动时创建的初始化连接数量 -->
+		<property name="initialSize" value="0" />
+		<!-- 最大活动连接：默认值8；连接池在同一时间能够分配的最大活动连接的数量，如果设置为非正数则表示不限制 -->
+		<!-- <property name="maxActive" value="20" /> -->
+		<!-- 最小空闲连接：默认值0；连接池中允许保持空闲状态的最小连接数量,低于这个数量将创建新的连接，如果设置为0则不创建 -->
+		<property name="minIdle" value="5" />
+		<!-- 最大空闲连接：默认值8；连接池中容许保持空闲状态的最大连接数量,超过的空闲连接将被释放，如果设置为负数表示不限制 -->
+		<property name="maxIdle" value="20" />
+		<!-- 最大等待时间：默认值无限；当没有可用连接时，连接池等待连接被归还的最大时间(以毫秒计数)，超过时间则抛出异常，如果设置为-1表示无限等待 -->
+		<!-- <property name="maxWait" value="1000" /> -->
+		<!-- 连通性验证：用来验证从连接池取出的连接，在将连接返回给调用者之前。如果指定，则查询必须是一个SQL SELECT并且必须返回至少一行记录 -->
+		<property name="validationQuery" value="SELECT NOW() FROM DUAL" />
+		
+		<!-- 连接被泄露时是否打印：标记当Statement或连接被泄露时是否打印程序的stack traces日志 -->
+		<property name="logAbandoned" value="true" />
+		<!-- 是否自动回收超时连接 -->
+		<!-- <property name="removeAbandoned" value="true" /> -->
+		<!-- 超时时间(以秒数为单位) -->
+		<property name="removeAbandonedTimeout" value="10" />
+		<!-- 在空闲连接回收器线程运行期间休眠的时间值，以毫秒为单位-->
+		<property name="timeBetweenEvictionRunsMillis" value="10000" />
+		<!-- 在每次空闲连接回收器线程(如果有)运行时检查的连接数量 -->
+		<property name="numTestsPerEvictionRun" value="10" />
+		<!-- 连接在池中保持空闲而不被空闲连接回收时间 -->
+		<property name="minEvictableIdleTimeMillis" value="10000" />
+	</bean>
+	
+	<!-- ================================================================配置数据源================================================================= -->
+	
+	
+	<!-- =============================================================针对spring的配置项============================================================ -->
+	
+	<!-- 配置Spring的事务管理器 -->
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	
+	<!-- 注解方式配置事物 -->
+    <!-- <tx:annotation-driven transaction-manager="transactionManager" /> -->
+    
+	<!-- 拦截器方式配置事物 -->
+	<tx:advice id="transactionAdvice" transaction-manager="transactionManager">
+		<tx:attributes>
+			<tx:method name="add*" propagation="REQUIRED" />
+			<tx:method name="append*" propagation="REQUIRED" />
+			<tx:method name="insert*" propagation="REQUIRED" />
+			<tx:method name="save*" propagation="REQUIRED" />
+			<tx:method name="update*" propagation="REQUIRED" />
+			<tx:method name="modify*" propagation="REQUIRED" />
+			<tx:method name="edit*" propagation="REQUIRED" />
+			<tx:method name="delete*" propagation="REQUIRED" />
+			<tx:method name="remove*" propagation="REQUIRED" />
+			<tx:method name="repair" propagation="REQUIRED" />
+			<tx:method name="delAndRepair" propagation="REQUIRED" />
+
+			<tx:method name="get*" propagation="SUPPORTS" />
+			<tx:method name="find*" propagation="SUPPORTS" />
+			<tx:method name="load*" propagation="SUPPORTS" />
+			<tx:method name="search*" propagation="SUPPORTS" />
+			<tx:method name="datagrid*" propagation="SUPPORTS" />
+
+			<tx:method name="*" propagation="SUPPORTS" />
+		</tx:attributes>
+	</tx:advice>
+	
+	<aop:config>
+		<aop:pointcut id="transactionPointcut" expression="execution(* me.gacl.service..*Impl.*(..))" />
+		<aop:advisor pointcut-ref="transactionPointcut" advice-ref="transactionAdvice" />
+	</aop:config>	
+	<!-- =============================================================针对spring的配置项============================================================ -->
+	
+	
+	<!-- =============================================================针对myBatis的配置项=========================================================== -->
+	
+	<!-- 配置SqlSessionFactory，此处id不能使用sqlSessionFactory，否则出现配置文件jdbc.properties无法加载问题 -->
+	<bean id="mySqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<!-- dataSource属性指定要用到的连接池 -->
+		<property name="dataSource" ref="dataSource" />
+		<!-- configLocation属性指定mybatis的核心配置文件 -->
+		<property name="configLocation" value="classpath:mybatis-configuration.xml" />
+		<!-- 自动批量扫描所有JavaBean别名，省掉sqlMapConfig.xml里手工配置typeAliases信息 -->
+		<property name="typeAliasesPackage" value="org.bluesky.mybatis.entity"></property>
+		<!-- 插件配置，省掉sqlMapConfig.xml里手工配置plugins信息 -->
+		<property name="plugins">
+			<array>
+				<bean class="com.github.pagehelper.PageHelper">
+					<property name="properties">
+						<value>dialect=hsqldb</value>
+					</property>
+				</bean>
+			</array>
+		</property>
+		<!-- 自动扫描所有SQL映射的xml文件，省掉sqlMapConfig.xml里手工配置mapper信息 -->
+		<!-- 第一种配置多个Mapper映射文件夹方式 -->
+		<property name="mapperLocations" value="classpath:org/bluesky/mybatis/mapper/params/*.xml" />
+		<!--
+		<property name="mapperLocations" value="classpath:org/bluesky/ssm/mapper/**/*Mapper.xml" />
+        -->
+		<!-- 第二种配置多个Mapper映射文件夹方式 -->
+		<!--
+		<property name="mapperLocations">
+			<list>
+                <value>classpath:org/bluesky/ssm/mapper/*Mapper.xml</value>
+                <value>classpath:org/bluesky/ssm/mapper/auto/*Mapper.xml</value>
+            </list>
+        </property>
+        -->
+	</bean>
+
+	<!-- 配置扫描器 -->
+	<!--注意：1.MapperScannerConfigurer采用了Spring针对自动侦测到的组件的默认命名策略，亦即把类/接口名字的首字母小写，其他不变，作为映射器的名字.例如：TeacherDao被扫描后创建的映射器bean名为teacherDao.
+			 2.可以使用@Component注解给映射器指定名称.接口中增加如下声明：“import org.springframework.stereotype.Component;”：在接口声明前添加@Component("myTeacherDao")注解。
+	       	 3.有些资料中说“将mapper.java接口和mapper.xml映射文件名称保持一致，且在一个目录中”，
+			      但经本人实际测试，mybatis配置文件中不使用mappers元素，如果上面配置了mapperLocations属性，则不必使mapper.java接口和mapper.xml映射文件名称保持一致，且不必在一个目录中；
+			      如果上面没有配置mapperLocations属性，则需要按照该规则 -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<!-- basePackage指定要扫描的包（存放接口），在此包及子包之下的映射器都会被搜索到。可指定多个包，包与包之间用逗号或分号分隔 -->
+		<property name="basePackage" value="org.bluesky.mybatis.dao.params" />
+		<property name="sqlSessionFactoryBeanName" value="mySqlSessionFactory" />
+	</bean>	
+	
+	<!-- =============================================================针对myBatis的配置项=========================================================== -->
+	
+</beans>

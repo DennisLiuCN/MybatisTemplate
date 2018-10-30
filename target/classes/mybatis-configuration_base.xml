@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<!--引入数据源配置文件 -->
+	<properties resource="jdbc.properties" />
+	
+	<!--表明重用预编译的SQL语句 -->
+	<settings>
+		<setting name="defaultExecutorType" value="REUSE" />
+	</settings>
+
+	<!--类型别名定义。今后可只用Student来代替它冗长的 全限定名 -->
+	<typeAliases>
+		<typeAlias alias="Student" type="org.bluesky.mybatis.entity.Student" />
+		<typeAlias alias="Teacher" type="org.bluesky.mybatis.entity.Teacher"/>
+		<typeAlias alias="Course" type="org.bluesky.mybatis.entity.Course"/>
+		
+		<!-- 批量别名定义 
+		指定包名，mybatis自动扫描包中的po类，自动定义别名，别名就是类名（首字母大写或小写都可以） -->
+		<!--
+		<package name="org.bluesky.mybatis.entity"/>
+		-->
+	</typeAliases>
+	
+	<!--environments可包含多个environment元素。 每个environment配置与数据库交互的细节，这里只需要配置一个。
+		default属性是指在创建SqlSessionFactory时，若没有明确指定要用哪个environment，则使用此属性指定的
+		和spring整合后 environments配置将废除 -->
+	<environments default="development">
+		<environment id="development">
+			<transactionManager type="jdbc" />
+			<!--使用连接池的数据源配置 -->
+			<dataSource type="POOLED">
+				<property name="driver" value="${jdbc.driver}" />
+				<property name="url" value="${jdbc.url}" />
+				<property name="username" value="${jdbc.username}" />
+				<property name="password" value="${jdbc.password}" />
+			</dataSource>
+		</environment>
+	</environments>
+
+	<!--指定要用到的mapper文件。以下的resource属性告诉 MyBatis要在类路径下的org/bluesky/mybatis/mapper目录下找StudentMapper.xml文件
+		若映射器接口（如StudentDao.java接口）与相应的映射配置文件（如StudentMapper.xml）同名且在同一目录下，就无需在配置文件mybatis-configuration.xml中使用mappers元素来指定映射配置文件 -->
+	<mappers>
+		<!--通过resource方法一次加载一个映射文件 -->
+		<mapper resource="org/bluesky/mybatis/mapper/StudentMapper.xml" />
+		<mapper resource="org/bluesky/mybatis/mapper/TeacherMapper.xml" />
+		<mapper resource="org/bluesky/mybatis/mapper/CourseMapper.xml" />
+		<mapper resource="org/bluesky/mybatis/mapper/function/FunctionMapper.xml" />
+		
+		<!-- 批量加载mapper
+		          指定mapper接口的包名，mybatis自动扫描包下边所有mapper接口进行加载
+		          遵循一些规范：需要将mapper接口类名和mapper.xml映射文件名称保持一致，且在一个目录中
+		          上边规范的前提是：使用的是mapper代理方法
+		          和spring整合后mybatis接口bean使用第三种定义方式mapper扫描器时，这里不需要配置了 -->
+		<!--
+		<package name="org.bluesky.mybatis.mapper"/>
+		-->
+	</mappers>
+</configuration>

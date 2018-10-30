@@ -1,0 +1,12 @@
+org.bluesky.mybatis.base
+mybatis基本使用测试
+此包中的测试类使用配置文件mybatis-configuration_base.xml
+
+org.bluesky.mybatis.cascade
+mybatis与spring整合，级联关系测试
+此包中的测试类使用配置文件mybatis-configuration_spring.xml和applicationContext_mybatis.xml
+
+org.bluesky.mybatis.param
+mybatis与spring整合，多参数传递，使用注解方式测试
+此包中的测试类使用配置文件mybatis-configuration.xml和applicationContext.xml
+注解方式需要引入spring-aspects-4.1.6.RELEASE.jar包，否则将报NoClassDefFoundError:aspectj/weaver/reflect/ReflectionWorld$Reflection

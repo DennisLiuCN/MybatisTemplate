@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--namespace是StudentDao的完整限定名 -->
+<mapper namespace="org.bluesky.mybatis.dao.StudentDao">
+	
+	<!-- ======================================================非级联相关操作Start===================================================== -->
+	
+	<!--定义java bean的属性与数据库表的列之间的映射。type="Student"用到了mybatis-configuration.xml中定义的别名
+		使用extends继承，extends="studentResultMap"，可以继承其他resultMap，从而达到代码复用，此处的studentResultMap定义简单没有用到extends -->
+	<resultMap id="studentResultMap" type="Student">
+		<!--id映射，如果主键为多个，此处配置多个id -->
+		<id property="id" column="id" />
+		<!--普通属性映射。property为实体类的属性名， column为数据库中的列名。
+			如果property和column完全相同，可以省略column -->
+		<result property="name" column="name" />
+		<result property="gender" column="gender" />
+		<result property="major" column="major" />
+		<result property="grade" column="grade" />
+	</resultMap>
+	
+	<!--与StudentDao接口中的getById方法对应，包括方法名和参数类型。
+		SQL语句中以“#{}”的形式引用参数，parameterType为基本类型时，#{}中名称可以任意，为对象类型时，名称需要与类的属性名对应 -->
+	<!--Student不与Teacher关联时的查询方式 -->
+ 	<select id="getById" parameterType="int" resultMap="studentResultMap">
+		select * from student where id=#{id}
+	</select>
+	
+	<!--与上面查询格式一致。 resultType类的属性必须与数据库字段完全相同，resultMap可以灵活设置对应关系，两种定义方式返回值可以为实体类或实体类的集合 -->
+	<select id="getByName" parameterType="string" resultType="Student">
+		SELECT * FROM student WHERE name like #{name}
+	</select>
+
+	<!--执行增加操作的SQL语句。id和parameterType分别与StudentDao接口中的add方法的名字和参数类型一致。
+		以#{name}的形式引用Student参数的name属性，MyBatis将使用反射读取Student参数的此属性。#{name}中name大小写敏感。引用其他的gender等属性与此一致。
+		注意：#{}和${}的区别
+		    1)：#{}表示一个占位符号，#{}接收输入参数，类型可以是简单类型，pojo、hashmap。
+		        如果接收简单类型，#{}中可以写成value或其它名称。
+		    #{}接收pojo对象值，通过OGNL读取对象中的属性值，通过属性.属性.属性...的方式获取对象属性值。
+
+		    2)：${}表示一个拼接符号，会引用sql注入，所以不建议使用${}。
+		    ${}接收输入参数，类型可以是简单类型，pojo、hashmap。
+		        如果接收简单类型，${}中只能写成value。
+		    ${}接收pojo对象值，通过OGNL读取对象中的属性值，通过属性.属性.属性...的方式获取对象属性值。 -->
+	<!--useGeneratedKeys设置为"true"表明要MyBatis获取由数据库自动生成的主键；keyProperty="id"指定把获取到的主键值注入到Student的id属性。
+		useGeneratedKeys属性与selectKey标签实现效果相同
+		但是selectKey节点生成的KeyGenerator优先级高于statement节点的useGeneratedKeys属性生成的KeyGenerator对象，即配置了SelectKey子节点就不需要再配置useGeneratedKeys属性-->
+	<insert id="add" parameterType="Student" useGeneratedKeys="true" keyProperty="id">
+		insert into student(name,gender,major,grade) values (#{name},#{gender},#{major},#{grade})
+	</insert>
+	<!--
+	<insert id="add" parameterType="Student">
+		<!- keyProperty：selectKey语句生成结果需要设置的属性
+			resultType：生成结果类型，MyBatis允许使用基本的数据类型，包括String、int类型
+			order：BEFORE-先选择主键，然后设置keyProperty再执行insert语句；AFTER-先运行insert语句再运行selectKey语句 ->
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">
+			select LAST_INSERT_ID() 
+		</selectKey>
+		insert into student(name,gender,major,grade) values (#{name},#{gender},#{major},#{grade})
+	</insert>
+	-->
+
+	<!--执行修改操作的SQL语句。id和parameterType属性以及“#{}”的形式的含义与上述insert语句一致。-->
+	<update id="update" parameterType="Student">
+		update student set name=#{name}, gender=#{gender}, major=#{major}, grade=#{grade} where id=#{id}
+	</update>
+
+	<!--执行删除操作的SQL语句。#{id}引用参数id的值 -->
+	<delete id="delete" parameterType="int">
+		delete from student where id=#{id}
+	</delete>
+
+	<insert id="addElecCourse" useGeneratedKeys="true" keyColumn="GENERATED_KEY">
+		insert into student_course(student_id, course_id)
+		values(#{param1.id}, #{param2.id})
+	</insert>
+	
+	<!-- ======================================================非级联相关操作end======================================================= -->
+	
+	
+	<!-- ======================================================动态SQL相关操作start====================================================== -->
+	
+	<!-- sql片段的使用
+		  将where条件抽取出来，达到代码复用的效果 -->
+	<sql id="query_student_where">
+		<if test="id != null and id != ''">
+			and id = #{id}
+		</if>
+		<if test="name != null and name != ''">
+			and name like '%${name}%'
+			<!-- 其他写法 -->
+			<!--
+			and name like CONCAT(CONCAT('%', #{name}),'%')
+			-->
+			<!--
+			and name like "%"#{name}"%"
+			-->
+		</if>
+		<if test="gender != null and gender != ''">
+			and gender = #{gender}
+		</if>
+		<if test="major != null and major != ''">
+			and major = #{major}
+		</if>
+		<if test="grade != null and grade != ''">
+			and grade = #{grade}
+		</if>
+	</sql>
+	
+	<!-- where标签和if标签的使用 -->
+	<!-- 传递参数类型为对象类型 -->
+	<select id="getByStudentDynamicSQL" parameterType="Student" resultType="Student">
+		SELECT * FROM student
+		<!-- <where />可以自动处理第一个and或者or -->
+		<!--
+		<where>
+			<if test="id != null and id != ''">
+				and id = #{id}
+			</if>
+			<if test="name != null and name != ''">
+				and name like '%${name}%'
+			</if>
+			<if test="gender != null and gender != ''">
+				and gender = #{gender}
+			</if>
+			<if test="major != null and major != ''">
+				and major = #{major}
+			</if>
+			<if test="grade != null and grade != ''">
+				and grade = #{grade}
+			</if>
+		</where>
+		-->
+		<where>
+			<!-- 使用include引用sql片段，如果要引用的sql片段在其他映射文件中，在引用时需要加上namespace
+				  例如：org.bluesky.mybatis.dao.StudentDao.query_student_where -->
+			<include refid="query_student_where"/>
+		</where>
+	</select>
+	
+	<!-- foreach标签的使用 -->
+	<!-- 传递参数类型为List，List内容为对象类型 -->
+	<select id="getByListDynamicSQL" parameterType="List" resultType="Student">
+		SELECT * FROM student
+		<!-- <where />可以自动处理第一个and -->
+		<where>
+			<if test="list != null and list.size() > 0">
+				<!-- sql只接收一个数组参数，这时sql解析参数的名称mybatis固定为list
+					 index：为数组的下标；item：为数组每个元素的名称，名称随意定义；open：循环开始；close：循环结束；separator：中间分隔输出 -->
+				<foreach collection="list" item="student" open="and id in(" separator="," close=")">
+		    		#{student.id}
+				</foreach>
+			</if>
+		</where>
+	</select>
+	
+	<!-- foreach标签的使用 -->
+	<!-- 传递参数类型为Array -->
+	<select id="getByArrayDynamicSQL" parameterType="Object[]" resultType="Student">
+		SELECT * FROM student
+		<!-- <where />可以自动处理第一个and -->
+		<where>
+			<if test="array != null">
+				<!-- sql只接收一个数组参数，这时sql解析参数的名称mybatis固定为array
+					 index：为数组的下标；item：为数组每个元素的名称，名称随意定义；open：循环开始；close：循环结束；separator：中间分隔输出 -->
+				<foreach collection="array" index="index" item="student" open="and id in(" separator="," close=")">
+					<!-- Array内容为对象类型 -->
+					#{student.id}
+					<!-- Array内容为简单类型 -->
+					<!--
+					#{student}
+					-->
+				</foreach>
+			</if>
+		</where>
+	</select>
+	
+	<!-- set标签的使用 -->
+	<update id="updateDynamicSQL" parameterType="Student">
+		update student 
+		<!-- <set />可以自动处理最后一个, -->
+		<set>
+			<if test="name != null and name != ''">
+				name = #{name},
+			</if>
+			<if test="gender != null and gender != ''">
+				gender = #{gender},
+			</if>
+			<if test="major != null and major != ''">
+				major = #{major},
+			</if>
+			<if test="grade != null and grade != ''">
+				grade = #{grade}
+			</if>
+		</set>
+		where id=#{id}
+	</update>
+	
+	<!-- choose标签的使用 -->
+	<sql id="query_choose_where">
+		<choose>
+			<when test="name != null and name != ''">
+				or name like CONCAT(CONCAT('%', #{name}),'%')
+			</when>
+			<when test="gender != null and gender != ''">
+				or gender = #{gender}
+			</when>
+			<when test="major != null and major != ''">
+				or major = #{major}
+			</when>
+			<when test="grade != null and grade != ''">
+				or grade = #{grade}
+			</when>
+			<otherwise>
+				or id = #{id}
+			</otherwise>
+		</choose>
+	</sql>
+	
+	<!-- ======================================================动态SQL相关操作end======================================================= -->
+	
+	
+	<!-- ======================================================级联相关操作start====================================================== -->
+	<!-- ============================处理has-one关系需要用到association元素，而处理has-many关系则需要用到collection元素=========================== -->
+	<!-- ===================================================学生级联教师，教师不级联学生==================================================== -->
+	
+	<!--学生实体映射 -->
+	<resultMap id="studentAssoResultMap" type="Student" extends="studentResultMap">
+		<!--使用extends后，不需要编写下面内容-->
+		<!--
+		<!-id映射 ->
+		<id property="id" column="id" />
+		<!-普通属性映射。property为实体类的属性名， column为数据库中的列名 ->
+		<result property="name" column="name" />
+		<result property="gender" column="gender" />
+		<result property="major" column="major" />
+		<result property="grade" column="grade" />
+		-->
+		
+		<!--association：用于映射关联查询单个对象的信息 -->
+		<!--property="supervisor"表明这是为了映射学生实体的 supervisor属性。javaType="Teacher"用到了Teacher这个别名定义，并指出了supervisor属性的java类型 -->
+		<!-- 第一种级联方式 -->
+		<!--
+		<association property="supervisor" javaType="Teacher">
+			<!-教师自身的属性与数据库字段的映射。注意这里用到了字段别名->
+			<id property="id" column="t_id" />
+			<result property="name" column="t_name" />
+			<result property="gender" column="t_gender" />
+			<result property="researchArea" column="t_research_area" />
+			<result property="title" column="t_title" />
+		</association>
+		-->
+		
+		<!-- 第二种级联方式，嵌套的resultMap，需要定义教师实体映射supervisorResultMap -->
+		<!--使用resultMap属性引用下面的教师实体映射。javaType="Teacher"可以不要，mybatis能够自动识别 -->
+		<!--
+		<association property="supervisor" resultMap="supervisorResultMap" />
+		-->
+		
+		<!-- 第三种级联方式，嵌套的select语句，需要定义教师实体映射supervisorResultMap
+			 这种级联方式支持指定association延迟加载执行 -->
+		<!--column="supervisor_id"不能少。此列的值作为参数传递给要引用的select语句，用来查询相应学生的指导教师的信息。select属性指定要引用的select语句。javaType="Teacher"可以不要，mybatis能够自动识别 -->
+		<association property="supervisor" column="supervisor_id" select="selectSupervisor" />
+	</resultMap>
+
+	<!-- 对应第二种级联方式 -->
+	<!--教师实体映射，两个表使用一个select关联，如果表中有相同字段名称时，select中需要用别名区别 -->
+	<!--
+	<resultMap id="supervisorResultMap" type="Teacher">
+		<id property="id" column="t_id" />
+		<result property="name" column="t_name" />
+		<result property="gender" column="t_gender" />
+		<result property="researchArea" column="t_research_area" />
+		<result property="title" column="t_title" />
+		<!-如果教师想再级联学生，加入<collection property="supervisees" ofType="Student" resultMap="studentAssoResultMap" /> ->
+	</resultMap>
+	-->
+	
+	<!-- 对应第一、二种级联方式 -->
+	<!--与StudentDao接口中的getByIdAsso方法对应，包括方法名和参数类型。SQL语句中以“#{}”的形式引用参数 -->
+	<!--
+ 	<select id="getByIdAsso" parameterType="int" resultMap="studentAssoResultMap">
+		select st.id,st.name,st.gender,st.major,st.grade,
+		<!-为教师的id取别名，避免MyBatis向教师实体注入此属性时与学生id混淆。以下的name和gender等属性也是如此->
+		t.id t_id,t.name t_name,t.gender t_gender,t.title t_title,t.research_area t_research_area
+		from student st, teacher t
+		where st.supervisor_id = t.id and st.id=#{id}
+	</select>
+	-->
+
+	<!-- 对应第三种级联方式 -->
+	<!--教师实体映射，两个表使用分别使用不同select关联，如果表中有相同字段名称时，可以不用别名区别 -->
+	<resultMap id="supervisorResultMap" type="Teacher">
+		<id property="id" column="id" />
+		<result property="name" column="name" />
+		<result property="gender" column="gender" />
+		<result property="researchArea" column="research_area" />
+		<result property="title" column="title" />
+	</resultMap>
+	
+	<!-- 对应第三种级联方式 -->
+	<!--与StudentDao接口中的getByIdAsso方法对应，包括方法名和参数类型。SQL语句中以“#{}”的形式引用参数 -->
+	<select id="getByIdAsso" parameterType="int" resultMap="studentAssoResultMap">
+		select * from student where id=#{id}
+	</select>
+	<select id="selectSupervisor" parameterType="int" resultMap="supervisorResultMap">
+		select * from teacher where id=#{id}
+	</select>
+
+	<!--级联方式下执行增加操作的SQL语句 -->
+	<insert id="addAsso" parameterType="Student" useGeneratedKeys="true" keyProperty="id">
+		insert into student(name,gender,major,grade,supervisor_id)
+		values(#{name},#{gender},#{major},#{grade},#{supervisor.id})
+	</insert>
+	
+	<!-- =========================================================级联相关操作end======================================================== -->
+	
+	
+	<!-- ========================================================级联相关操作start======================================================= -->
+	<!-- =============================================association元素与collection元素之间相互引用============================================ -->
+	<!-- =======================================================学生与教师之间相互级联======================================================= -->
+	
+	<!-- 对应第一种相互级联方式 -->
+	<!--
+	<resultMap id="studentAssoCollResultMap" type="Student">
+		<id property="id" column="id" />
+		<result property="name" column="name" />
+		<result property="gender" column="gender" />
+		<result property="major" column="major" />
+		<result property="grade" column="grade" />
+		
+		<association property="supervisor" resultMap="org.bluesky.mybatis.dao.TeacherDao.teacherAssoCollResultMap" />
+	</resultMap>
+	-->
+	
+	<!-- 第二种使用select的相互级联方式，容易造成N+1问题。解决办法为
+		  1.使用第一种相互级联方式：resultMap和一次性地查询学生和教师；
+		  2.使用MyBatis的延迟加载机制 -->
+	
+	<!-- 对应第二种相互级联方式 -->
+	<resultMap id="studentAssoCollResultMap" type="Student">
+		<id property="id" column="id" />
+		<result property="name" column="name" />
+		<result property="gender" column="gender" />
+		<result property="major" column="major" />
+		<result property="grade" column="grade" />
+
+		<association property="supervisor" column="supervisor_id" select="org.bluesky.mybatis.dao.TeacherDao.getByIdAssoColl" />
+	</resultMap>
+	
+	<!-- 对应第二种相互级联方式 -->
+	<select id="getByIdAssoColl" parameterType="int" resultMap="studentAssoCollResultMap">
+		select * from student where supervisor_id=#{id} order by name asc
+	</select>
+	
+	<!-- =========================================================级联相关操作end======================================================== -->
+		
+</mapper>

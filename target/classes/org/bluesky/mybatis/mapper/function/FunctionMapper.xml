@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--namespace是FunctionDao的完整限定名 -->
+<mapper namespace="org.bluesky.mybatis.dao.function.FunctionDao">
+	
+	<!-- ======================================================数据库函数操作Start===================================================== -->
+	
+	<parameterMap id="studentCountMap" type="java.util.Map">
+		<parameter property="name" mode="IN" jdbcType="VARCHAR" />
+		<parameter property="gender" mode="IN" jdbcType="INTEGER" />
+		<parameter property="count" mode="OUT" jdbcType="INTEGER" />
+	</parameterMap>
+	
+	<!-- statementType属性：STATEMENT、PREPARED或CALLABLE
+		 MyBatis分别使用Statement、PreparedStatement或CallableStatement执行查询，默认值：PREPARED -->
+	<select id="getStudentCount" parameterMap="studentCountMap" statementType="CALLABLE">
+		call P_GET_STUDENT(?, ?, ?)
+	</select>
+	<!-- ======================================================数据库函数操作end======================================================= -->
+		
+</mapper>
